@@ -80,18 +80,40 @@ glm::vec3 glmGeometryBuilder::getPointAt(double _lat, double _lon, double _alt){
 void glmGeometryBuilder::load(int _tileX, int _tileY, int _zoom, glmTile &_tile){
     //  TODO: get JSON file from the web
     //
-    std::string tmp = getURL("http://vector.mapzen.com/osm/all/"+ getString(_zoom)+"/" + getString(_tileX) + "/" + getString(_tileY)+".json");
+    
+    std::string filename = "../../../data/"+toString(_tileX)+"-"+toString(_tileY)+".json";
+    std::cout<<filename<<std::endl;
+    std::string line;
+    std::string json;
+    std::ifstream precache (filename.c_str());
+    if (precache.is_open())
+    {
+        while ( getline (precache,line) )
+        {
+            json.append(line);
+        }
+        precache.close();
+    }else{
+        json = getURL("http://vector.mapzen.com/osm/all/"+ toString(_zoom)+"/" + toString(_tileX) + "/" + toString(_tileY)+".json");
+        
+        std::ofstream cache;
+        cache.open(filename.c_str());
+        cache<<json;
+        cache.close();
+    }
+    
     
     std::tr1::shared_ptr<Json::Value> jsonVal(new Json::Value);
     
-    int length = tmp.size();
+    int length = json.size();
     Json::Reader jsonReader;
-    jsonReader.parse(tmp.c_str(), tmp.c_str() + length, *(jsonVal.get()));
+    jsonReader.parse(json.c_str(), json.c_str() + length, *(jsonVal.get()));
     
     _tile.tileX = _tileX;
     _tile.tileY = _tileY;
     _tile.zoom = _zoom;
     load( *(jsonVal.get()), _tile );
+    
     
 }
 
@@ -113,53 +135,53 @@ void glmGeometryBuilder::load(Json::Value &_jsonRoot, glmTile & _tile){
     //  Until the data from the server provides buildings parts
     //  merge buildings (both important for have smarter labels)
     //
-//    for (auto &pointLabel: _tile.labeledPoints) {
-//        
-//        for(int i = _tile.byLayers["buildings"].size()-1; i >= 0; i-- ){
-//            if (pointLabel.get() != NULL
-//                && _tile.byLayers["buildings"][i].get() != NULL
-//                && pointLabel.get() != _tile.byLayers["buildings"][i].get() ) {
-//                
-//                bool bOverlap = false;
-//                
-//                for (auto &it: _tile.byLayers["buildings"][i]->shapes ) {
-//                    glm::vec3 centroid = it.getCentroid();
-//                    for (auto &jt: pointLabel->shapes){
-//                        if( jt.isInside(centroid.x, centroid.y) ){
-//                            bOverlap = true;
-//                            break;
-//                        }
-//                    }
-//                    
-//                    if(bOverlap){
-//                        break;
-//                    }
-//                }
-//                
-//                if(bOverlap){
-//                    mergeFeature(pointLabel, _tile.byLayers["buildings"][i]);
-//                    
-//                    //  Erase the merged geometry
-//                    //
-//                    deleteFeature(_tile, _tile.byLayers["buildings"][i]->idString);
-//                }
-//                
-//            }
-//            
-//        }
-//        
-//        int maxHeight = 0;
-//        glm::vec3 center;
-//        for (auto &it: pointLabel->shapes) {
-//            if (it[0].z > maxHeight) {
-//                maxHeight = it[0].z;
-//            }
-//            center += it.getCentroid();
-//        }
-//        center = center / (float)pointLabel->shapes.size();
-//        center.z = maxHeight;
-//        pointLabel->setPosition(center);
-//    }
+    //    for (auto &pointLabel: _tile.labeledPoints) {
+    //
+    //        for(int i = _tile.byLayers["buildings"].size()-1; i >= 0; i-- ){
+    //            if (pointLabel.get() != NULL
+    //                && _tile.byLayers["buildings"][i].get() != NULL
+    //                && pointLabel.get() != _tile.byLayers["buildings"][i].get() ) {
+    //
+    //                bool bOverlap = false;
+    //
+    //                for (auto &it: _tile.byLayers["buildings"][i]->shapes ) {
+    //                    glm::vec3 centroid = it.getCentroid();
+    //                    for (auto &jt: pointLabel->shapes){
+    //                        if( jt.isInside(centroid.x, centroid.y) ){
+    //                            bOverlap = true;
+    //                            break;
+    //                        }
+    //                    }
+    //
+    //                    if(bOverlap){
+    //                        break;
+    //                    }
+    //                }
+    //
+    //                if(bOverlap){
+    //                    mergeFeature(pointLabel, _tile.byLayers["buildings"][i]);
+    //
+    //                    //  Erase the merged geometry
+    //                    //
+    //                    deleteFeature(_tile, _tile.byLayers["buildings"][i]->idString);
+    //                }
+    //
+    //            }
+    //
+    //        }
+    //
+    //        int maxHeight = 0;
+    //        glm::vec3 center;
+    //        for (auto &it: pointLabel->shapes) {
+    //            if (it[0].z > maxHeight) {
+    //                maxHeight = it[0].z;
+    //            }
+    //            center += it.getCentroid();
+    //        }
+    //        center = center / (float)pointLabel->shapes.size();
+    //        center.z = maxHeight;
+    //        pointLabel->setPosition(center);
+    //    }
 }
 
 glm::vec3 glmGeometryBuilder::getOffset(){
@@ -170,8 +192,8 @@ glmTile glmGeometryBuilder::getFromFile(std::string _filename){
     
     std::ifstream inputStream(_filename.c_str(),std::ifstream::in);
     if(inputStream.bad()){
-		return glmTile();
-	}
+        return glmTile();
+    }
     
     Json::Reader jsonReader;
     Json::Value m_jsonRoot;
@@ -240,11 +262,10 @@ void glmGeometryBuilder::deleteFeature( glmTile &_tile, const std::string &_idSt
 
 glmTile glmGeometryBuilder::getFromWeb(int _tileX, int _tileY, int _zoom){
     
-    if(m_bFirst){
-        setOffset(_tileX,_tileY,_zoom);
-        m_bFirst = false;
-    }
-    
+    //    if(m_bFirst){
+    //    setOffset(_tileX,_tileY,_zoom);
+    //        m_bFirst = false;
+    //    }
     glmTile newTile;
     load(_tileX, _tileY,_zoom,newTile);
     return newTile;
@@ -262,6 +283,13 @@ glmTile glmGeometryBuilder::getFromWeb(double _lat, double _lon, int _zoom){
     glmTile newTile;
     glmGeometryBuilder::load(tileX,tileY,_zoom,newTile);
     return newTile;
+}
+int glmGeometryBuilder::getTileX(double _lon){
+    return (int)long2tilex(_lon, 16);
+    
+}
+int glmGeometryBuilder::getTileY(double _lat){
+    return (int)lat2tiley(_lat, 16);
 }
 
 void glmGeometryBuilder::buildLayer(Json::Value &_jsonRoot, const std::string &_layerName, glmTile &_tile, float _minHeight) {
@@ -294,7 +322,7 @@ void glmGeometryBuilder::buildLayer(Json::Value &_jsonRoot, const std::string &_
             
             //  PARSE POINT
             //
-
+            
             if (propsJson.isMember("name") && labelManager != NULL) {
                 
                 glmFeatureLabelPointRef labelRef(new glmFeatureLabelPoint( propsJson["name"].asString() ));
@@ -321,7 +349,7 @@ void glmGeometryBuilder::buildLayer(Json::Value &_jsonRoot, const std::string &_
             } else {
                 feature->shapes.push_back(polyline);
             }
-        
+            
             pointJson2Mesh(geometryJson["coordinates"], *feature, 3, 6, minHeight);
             
         } else if (geometryType.compare("MultiPoint") == 0) {
@@ -356,7 +384,7 @@ void glmGeometryBuilder::buildLayer(Json::Value &_jsonRoot, const std::string &_
             } else {
                 feature->shapes.push_back(polyline);
             }
-
+            
             for (int j = 0; j < geometryJson["coordinates"].size(); j++) {
                 pointJson2Mesh(geometryJson["coordinates"][j], *feature, 3.0, 6, minHeight);
             }
@@ -369,7 +397,7 @@ void glmGeometryBuilder::buildLayer(Json::Value &_jsonRoot, const std::string &_
             
             if (propsJson.isMember("name") && labelManager != NULL) {
                 glmFeatureLabelLineRef labelRef(new glmFeatureLabelLine(propsJson["name"].asString()));
-        
+                
                 _tile.labeledFeatures.push_back(labelRef);
                 _tile.labeledLines.push_back(labelRef);
                 
@@ -385,7 +413,7 @@ void glmGeometryBuilder::buildLayer(Json::Value &_jsonRoot, const std::string &_
                 feature->shapes.push_back(polyline);
             }
             
-//            feature->add(polyline,lineWidth);
+            //            feature->add(polyline,lineWidth);
             flatLine(*feature, polyline, lineWidth);
             
         } else if (geometryType.compare("MultiLineString") == 0) {
@@ -395,7 +423,7 @@ void glmGeometryBuilder::buildLayer(Json::Value &_jsonRoot, const std::string &_
             if (propsJson.isMember("name") && labelManager != NULL) {
                 
                 glmFeatureLabelLineRef labelRef(new glmFeatureLabelLine( propsJson["name"].asString() ));
-
+                
                 _tile.labeledFeatures.push_back(labelRef);
                 _tile.labeledLines.push_back(labelRef);
                 
@@ -422,7 +450,7 @@ void glmGeometryBuilder::buildLayer(Json::Value &_jsonRoot, const std::string &_
                 }
             }
             
-//            feature->add(polyline,lineWidth);
+            //            feature->add(polyline,lineWidth);
             flatLine(*feature, polyline, lineWidth);
             
         } else if (geometryType.compare("Polygon") == 0) {
@@ -433,7 +461,7 @@ void glmGeometryBuilder::buildLayer(Json::Value &_jsonRoot, const std::string &_
             
             if (propsJson.isMember("name") && labelManager != NULL) {
                 glmFeatureLabelPointRef labelRef(new glmFeatureLabelPoint(propsJson["name"].asString()));
-
+                
                 labelRef->setFont(labelManager->getFont());
                 labelRef->setPosition(polyline.getCentroid());
                 
@@ -506,7 +534,7 @@ void glmGeometryBuilder::buildLayer(Json::Value &_jsonRoot, const std::string &_
         feature->setColor(LayerColorPalette[_layerName]);
         feature->idString = featureListJson[i]["id"].asString();
         
-        //  Save the share pointer into 2 maps organiced by ID and LAYER 
+        //  Save the share pointer into 2 maps organiced by ID and LAYER
         //
         _tile.byLayers[_layerName].push_back(feature);
     }

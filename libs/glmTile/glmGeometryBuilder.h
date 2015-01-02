@@ -47,6 +47,8 @@ public:
     std::map< std::string, glm::vec4 > LayerColorPalette;
     
     float lineWidth;
+    int getTileX(double lon);
+    int getTileY(double lat);
     
 protected:
     

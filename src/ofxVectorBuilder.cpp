@@ -18,6 +18,10 @@ ofxVectorBuilder::~ofxVectorBuilder(){
     
 }
 
+void ofxVectorBuilder::setOffset(ofPoint p){
+    glmGeometryBuilder::setOffset(p.x, p.y, p.z);
+}
+
 ofPoint ofxVectorBuilder::getOffset(){
     return toOf(glmGeometryBuilder::getOffset());
 }

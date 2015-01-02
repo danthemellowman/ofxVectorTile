@@ -16,6 +16,7 @@ public:
     ofxVectorBuilder();
     virtual ~ofxVectorBuilder();
     
+    void    setOffset(ofPoint p);
     ofPoint getOffset();
     ofPoint getPointAt(double _lat, double _lon, double _alt = 0);
     
